@@ -13,16 +13,17 @@ import type {
 import {
   COLORS,
   CYMRGB,
+  MAGENTA_GREEN,
+  MAX_CHANNELS,
+  RGB,
+  attrs as getAttrs,
   getAxisLabels,
   guessTileSize,
   hexToRGB,
   loadMultiscales,
-  MAGENTA_GREEN,
-  MAX_CHANNELS,
   open,
   parseMatrix,
   range,
-  RGB,
 } from './utils';
 
 function loadSingleChannel(config: SingleChannelConfig, data: ZarrPixelSource<string[]>[], max: number): SourceData {
@@ -109,7 +110,7 @@ export async function createSourceData(config: ImageLayerConfig): Promise<Source
   let data: ZarrArray[];
 
   if (node instanceof ZarrGroup) {
-    const attrs = (await node.attrs.asObject()) as Ome.Attrs;
+    const attrs = await getAttrs<Ome.Attrs>(node);
 
     if ('plate' in attrs) {
       return loadPlate(config, node, attrs.plate);
@@ -128,7 +129,7 @@ export async function createSourceData(config: ImageLayerConfig): Promise<Source
       // if url is to a plate/acquisition/ check parent dir for 'plate' zattrs
       const parentUrl = node.store.url.slice(0, node.store.url.lastIndexOf('/'));
       const parent = await openGroup(new HTTPStore(parentUrl));
-      const parentAttrs = (await parent.attrs.asObject()) as Ome.Attrs;
+      const parentAttrs = await getAttrs<Ome.Attrs>(parent);
       if ('plate' in parentAttrs) {
         return loadPlate(config, parent, parentAttrs.plate);
       }

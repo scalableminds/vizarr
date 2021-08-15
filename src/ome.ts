@@ -2,7 +2,7 @@ import { ZarrPixelSource } from '@hms-dbmi/viv';
 import pMap from 'p-map';
 import { Group as ZarrGroup, HTTPStore, openGroup, ZarrArray } from 'zarr';
 import type { ImageLayerConfig, SourceData } from './state';
-import { join, loadMultiscales, guessTileSize, range, parseMatrix } from './utils';
+import { attrs, join, loadMultiscales, guessTileSize, range, parseMatrix } from './utils';
 
 export async function loadWell(config: ImageLayerConfig, grp: ZarrGroup, wellAttrs: Ome.Well): Promise<SourceData> {
   // Can filter Well fields by URL query ?acquisition=ID
@@ -28,7 +28,7 @@ export async function loadWell(config: ImageLayerConfig, grp: ZarrGroup, wellAtt
     // Need to get acquisitions metadata from parent Plate
     const plateUrl = grp.store.url.replace(`${row}/${col}`, '');
     const plate = await openGroup(new HTTPStore(plateUrl));
-    const plateAttrs = (await plate.attrs.asObject()) as { plate: Ome.Plate };
+    const plateAttrs = await attrs<{ plate: Ome.Plate }>(plate);
     acquisitions = plateAttrs?.plate?.acquisitions ?? [];
 
     // filter imagePaths by acquisition
@@ -42,7 +42,7 @@ export async function loadWell(config: ImageLayerConfig, grp: ZarrGroup, wellAtt
   const rows = Math.ceil(imgPaths.length / cols);
 
   // Use first image for rendering settings, resolutions etc.
-  const imgAttrs = (await grp.getItem(imgPaths[0]).then((g) => g.attrs.asObject())) as Ome.Attrs;
+  const imgAttrs = await attrs<Ome.Attrs>(grp, imgPaths[0]);
   if (!('omero' in imgAttrs)) {
     throw Error('Path for image is not valid.');
   }
@@ -119,13 +119,13 @@ export async function loadPlate(config: ImageLayerConfig, grp: ZarrGroup, plateA
   const wellPaths = plateAttrs.wells.map((well) => well.path);
 
   // Use first image as proxy for others.
-  const wellAttrs = (await grp.getItem(wellPaths[0]).then((g) => g.attrs.asObject())) as Ome.Attrs;
+  const wellAttrs = await attrs<Ome.Attrs>(grp, wellPaths[0]);
   if (!('well' in wellAttrs)) {
     throw Error('Path for image is not valid, not a well.');
   }
 
   const imgPath = wellAttrs.well.images[0].path;
-  const imgAttrs = (await grp.getItem(join(wellPaths[0], imgPath)).then((g) => g.attrs.asObject())) as Ome.Attrs;
+  const imgAttrs = await attrs<Ome.Attrs>(grp, join(wellPaths[0], imgPath));
   if (!('omero' in imgAttrs)) {
     throw Error('Path for image is not valid.');
   }

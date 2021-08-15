@@ -149,3 +149,8 @@ export function parseMatrix(model_matrix?: string | number[]): Matrix4 {
   }
   return matrix;
 }
+
+export async function attrs<T extends Record<string, unknown>>(grp: ZarrGroup, path?: string) {
+  const node = path ? await grp.getItem(path) : grp;
+  return node.attrs.asObject() as Promise<T>;
+}
