@@ -1,12 +1,14 @@
 import { Grid, Typography, Divider } from '@material-ui/core';
 import { useAtom } from 'jotai';
 import { useAtomValue } from 'jotai/utils';
-import type { ChangeEvent } from 'react';
 import React, { useState, useEffect } from 'react';
 import { Slider } from '@material-ui/core';
 import { withStyles } from '@material-ui/styles';
+import { debounce } from 'lodash';
 import DimensionOptions from './AxisOptions';
 import type { ControllerProps } from '../../state';
+
+const WAIT = 500; // ms, debounce
 
 const DenseSlider = withStyles({
   root: {
@@ -38,24 +40,25 @@ function AxisSlider({ sourceAtom, layerAtom, axisIndex, max }: ControllerProps<P
   // If axis index change externally, need to update state
   useEffect(() => {
     // Use first channel to get initial value of slider - can be undefined on first render
-    setValue(layer.layerProps.loaderSelection[0] ? layer.layerProps.loaderSelection[0][axisIndex] : 1);
-  }, [layer.layerProps.loaderSelection]);
+    setValue(layer.layerProps.loaderSelection[0]?.[axisIndex] ?? 1);
+  }, [layerAtom]);
 
-  const handleRelease = () => {
+  const updateSelection = debounce((v: number) => {
     setLayer((prev) => {
       let layerProps = { ...prev.layerProps };
       // for each channel, update index of this axis
       layerProps.loaderSelection = layerProps.loaderSelection.map((ch) => {
         let new_ch = [...ch];
-        new_ch[axisIndex] = value;
+        new_ch[axisIndex] = v;
         return new_ch;
       });
       return { ...prev, layerProps };
     });
-  };
+  }, WAIT);
 
-  const handleDrag = (_: ChangeEvent<unknown>, value: number | number[]) => {
-    setValue(value as number);
+  const handleChange = (_: unknown, v: number | number[]) => {
+    setValue(v as number);
+    updateSelection(v as number);
   };
 
   return (
@@ -75,14 +78,7 @@ function AxisSlider({ sourceAtom, layerAtom, axisIndex, max }: ControllerProps<P
         </Grid>
         <Grid container justify="space-between">
           <Grid item xs={12}>
-            <DenseSlider
-              value={value}
-              onChange={handleDrag}
-              onChangeCommitted={handleRelease}
-              min={0}
-              max={max}
-              step={1}
-            />
+            <DenseSlider value={value} onChange={handleChange} min={0} max={max} step={1} />
           </Grid>
         </Grid>
       </Grid>
