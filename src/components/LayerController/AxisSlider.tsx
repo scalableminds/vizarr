@@ -6,7 +6,9 @@ import React, { useState, useEffect } from 'react';
 import { Slider } from '@material-ui/core';
 import { withStyles } from '@material-ui/styles';
 import DimensionOptions from './AxisOptions';
-import type { ControllerProps } from '../../state';
+
+import type { PrimitiveAtom } from 'jotai';
+import type { SourceData } from '../../state';
 
 const DenseSlider = withStyles({
   root: {
@@ -19,13 +21,15 @@ const DenseSlider = withStyles({
   },
 })(Slider);
 
-interface Props {
+interface AxisSliderProps {
   axisIndex: number;
   max: number;
+  selectionsAtom: PrimitiveAtom<number[][]>;
+  sourceAtom: PrimitiveAtom<SourceData & { id: string }>;
 }
 
-function AxisSlider({ sourceAtom, layerAtom, axisIndex, max }: ControllerProps<Props>) {
-  const [layer, setLayer] = useAtom(layerAtom);
+function AxisSlider({ sourceAtom, selectionsAtom, axisIndex, max }: AxisSliderProps) {
+  const [selections, setSelections] = useAtom(selectionsAtom);
   const sourceData = useAtomValue(sourceAtom);
   const { axis_labels } = sourceData;
   let axisLabel = axis_labels[axisIndex];
@@ -38,20 +42,18 @@ function AxisSlider({ sourceAtom, layerAtom, axisIndex, max }: ControllerProps<P
   // If axis index change externally, need to update state
   useEffect(() => {
     // Use first channel to get initial value of slider - can be undefined on first render
-    setValue(layer.layerProps.selections[0] ? layer.layerProps.selections[0][axisIndex] : 1);
-  }, [layer.layerProps.selections]);
+    setValue(selections[0] ? selections[0][axisIndex] : 1);
+  }, [selections]);
 
   const handleRelease = () => {
-    setLayer((prev) => {
-      let layerProps = { ...prev.layerProps };
-      // for each channel, update index of this axis
-      layerProps.selections = layerProps.selections.map((ch) => {
+    // for each channel, update index of this axis
+    setSelections((prev) =>
+      prev.map((ch) => {
         let new_ch = [...ch];
         new_ch[axisIndex] = value;
         return new_ch;
-      });
-      return { ...prev, layerProps };
-    });
+      })
+    );
   };
 
   const handleDrag = (_: ChangeEvent<unknown>, value: number | number[]) => {
@@ -70,7 +72,7 @@ function AxisSlider({ sourceAtom, layerAtom, axisIndex, max }: ControllerProps<P
             </div>
           </Grid>
           <Grid item xs={1}>
-            <DimensionOptions sourceAtom={sourceAtom} layerAtom={layerAtom} axisIndex={axisIndex} max={max} />
+            <DimensionOptions sourceAtom={sourceAtom} selectionsAtom={selectionsAtom} axisIndex={axisIndex} max={max} />
           </Grid>
         </Grid>
         <Grid container justifyContent="space-between">

@@ -10,7 +10,9 @@ import AxisSliders from './AxisSliders';
 import ChannelController from './ChannelController';
 
 import { range } from '../../utils';
-import type { ControllerProps } from '../../state';
+
+import type { PrimitiveAtom } from 'jotai';
+import type { SourceData, LayerState } from '../../state';
 
 const Details = withStyles({
   root: {
@@ -20,7 +22,13 @@ const Details = withStyles({
   },
 })(AccordionDetails);
 
-function Content({ sourceAtom, layerAtom }: ControllerProps) {
+interface ContentProps {
+  sourceAtom: PrimitiveAtom<SourceData & { id: string }>;
+  layerAtom: PrimitiveAtom<LayerState>;
+  selectionsAtom: PrimitiveAtom<number[][]>;
+}
+
+function Content({ sourceAtom, layerAtom, selectionsAtom }: ContentProps) {
   const layer = useAtomValue(layerAtom);
   const nChannels = layer.layerProps.selections.length;
   return (
@@ -38,7 +46,7 @@ function Content({ sourceAtom, layerAtom }: ControllerProps) {
           </Grid>
         </Grid>
         <Divider />
-        <AxisSliders sourceAtom={sourceAtom} layerAtom={layerAtom} />
+        <AxisSliders sourceAtom={sourceAtom} selectionsAtom={selectionsAtom} />
         <Grid container justifyContent="space-between">
           <Grid item xs={3}>
             <Typography variant="caption">channels:</Typography>

@@ -2,7 +2,7 @@ import type { ImageLayer, MultiscaleImageLayer, ZarrPixelSource } from '@hms-dbm
 import type { Matrix4 } from 'math.gl';
 import type { PrimitiveAtom } from 'jotai';
 import { atom } from 'jotai';
-import { atomFamily, splitAtom, waitForAll } from 'jotai/utils';
+import { atomFamily, splitAtom, waitForAll, selectAtom } from 'jotai/utils';
 import type { ZarrArray } from 'zarr';
 import type { default as GridLayer, GridLayerProps, GridLoader } from './gridLayer';
 import { initLayerStateFromSource } from './io';
@@ -104,7 +104,7 @@ type WithId<T> = T & { id: string };
 
 export type ControllerProps<T = {}> = {
   sourceAtom: PrimitiveAtom<WithId<SourceData>>;
-  layerAtom: PrimitiveAtom<WithId<LayerState>>;
+  layerAtom: PrimitiveAtom<LayerState>;
 } & T;
 
 export const sourceInfoAtom = atom<WithId<SourceData>[]>([]);
@@ -114,9 +114,30 @@ export const viewStateAtom = atom<ViewState>(DEFAULT_VIEW_STATE);
 export const sourceInfoAtomAtoms = splitAtom(sourceInfoAtom);
 
 export const layerFamilyAtom = atomFamily(
-  (param: WithId<SourceData>) => atom({ ...initLayerStateFromSource(param), id: param.id }),
+  (param: WithId<SourceData>) => atom(initLayerStateFromSource(param)),
   (a, b) => a.id === b.id
 );
+
+type LayerSelections = number[][];
+
+export function selectionsAtomWithMatrixSideEffect(layerAtom: PrimitiveAtom<LayerState>) {
+  const matrixAtom = selectAtom(layerAtom, (layer) => layer.layerProps.modelMatrix);
+  return atom<LayerSelections, LayerSelections | ((prev: LayerSelections) => LayerSelections)>(
+    (get) => get(layerAtom).layerProps.selections,
+    (get, set, arg) => {
+      const tmpMatrix = get(matrixAtom);
+      // set selection and set model matrix to null
+      set(layerAtom, (prev) => {
+        let selections = typeof arg === 'function' ? arg(prev.layerProps.selections) : arg;
+        return { ...prev, layerProps: { ...prev.layerProps, selections, modelMatrix: null as any } };
+      });
+      // reset model matrix
+      set(layerAtom, (prev) => {
+        return { ...prev, layerProps: { ...prev.layerProps, modelMatrix: tmpMatrix } };
+      });
+    }
+  );
+}
 
 export const layerAtoms = atom((get) => {
   const atoms = get(sourceInfoAtomAtoms);

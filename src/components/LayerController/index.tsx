@@ -6,7 +6,7 @@ import { withStyles } from '@material-ui/styles';
 import Header from './Header';
 import Content from './Content';
 import type { ControllerProps } from '../../state';
-import { layerFamilyAtom } from '../../state';
+import { layerFamilyAtom, selectionsAtomWithMatrixSideEffect } from '../../state';
 
 const Accordion = withStyles({
   root: {
@@ -32,11 +32,12 @@ const Accordion = withStyles({
 function LayerController({ sourceAtom }: Omit<ControllerProps, 'layerAtom'>) {
   const sourceInfo = useAtomValue(sourceAtom);
   const layerAtom = layerFamilyAtom(sourceInfo);
+  const selectionsAtom = selectionsAtomWithMatrixSideEffect(layerAtom);
   const { name = '' } = sourceInfo;
   return (
     <Accordion defaultExpanded>
       <Header sourceAtom={sourceAtom} layerAtom={layerAtom} name={name} />
-      <Content sourceAtom={sourceAtom} layerAtom={layerAtom} />
+      <Content sourceAtom={sourceAtom} layerAtom={layerAtom} selectionsAtom={selectionsAtom} />
     </Accordion>
   );
 }

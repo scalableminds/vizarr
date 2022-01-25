@@ -5,6 +5,8 @@ import { useAtomValue } from 'jotai/utils';
 import { IconButton, Popover, Paper, Typography, Divider, Input } from '@material-ui/core';
 import { withStyles } from '@material-ui/styles';
 import { MoreHoriz } from '@material-ui/icons';
+
+import type { PrimitiveAtom } from 'jotai';
 import type { ControllerProps } from '../../state';
 
 const DenseInput = withStyles({
@@ -14,14 +16,16 @@ const DenseInput = withStyles({
   },
 })(Input);
 
-interface Props {
+type AxisOptionsProps = {
   axisIndex: number;
   max: number;
-}
+  selectionsAtom: PrimitiveAtom<number[][]>;
+  sourceAtom: ControllerProps['sourceAtom'];
+};
 
-function AxisOptions({ sourceAtom, layerAtom, axisIndex, max }: ControllerProps<Props>) {
+function AxisOptions({ sourceAtom, selectionsAtom, axisIndex, max }: AxisOptionsProps) {
   const sourceData = useAtomValue(sourceAtom);
-  const [layer, setLayer] = useAtom(layerAtom);
+  const [selections, setSelections] = useAtom(selectionsAtom);
   const [anchorEl, setAnchorEl] = useState<null | Element>(null);
 
   const handleClick = (event: MouseEvent<HTMLButtonElement>) => {
@@ -38,22 +42,19 @@ function AxisOptions({ sourceAtom, layerAtom, axisIndex, max }: ControllerProps<
     if (value < 0) value = 0;
     if (value > max) value = max;
 
-    setLayer((prev) => {
-      let layerProps = { ...prev.layerProps };
-      // for each channel, update index
-      layerProps.selections = layerProps.selections.map((ch) => {
+    // for each channel, update index
+    setSelections((prev) =>
+      prev.map((ch) => {
         let new_ch = [...ch];
         new_ch[axisIndex] = value;
         return new_ch;
-      });
-
-      return { ...prev, layerProps };
-    });
+      })
+    );
   };
 
   const open = Boolean(anchorEl);
   const id = open ? `${axisIndex}-index-${sourceData.id}-options` : undefined;
-  const value = layer.layerProps.selections[0] ? layer.layerProps.selections[0][axisIndex] : 1;
+  const value = selections[0] ? selections[0][axisIndex] : 1;
 
   return (
     <>
